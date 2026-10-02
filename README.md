@@ -1,11 +1,70 @@
-# 🛸 QUAD-iLQR: Real-Time Differential Dynamic Programming for Quadrotor Trajectory Optimization
+﻿# 🛸 QUAD-iLQR: Real-Time Differential Dynamic Programming for Quadrotor Trajectory Optimization
 
 ![C++20](https://img.shields.io/badge/Language-C%2B%2B20-blue.svg)
 ![Math Eigen3](https://img.shields.io/badge/Math-Eigen3-orange.svg)
 ![License MIT](https://img.shields.io/badge/License-MIT-green.svg)
 
 **QUAD-iLQR** is a high-performance, single-header C++20 library implementing the **Iterative Linear Quadratic Regulator (iLQR)**—a variant of Differential Dynamic Programming (DDP)—for trajectory optimization and obstacle avoidance of 12-DOF quadrotors.
-🧮 Mathematical Formulation1. State Space & Dynamics ModelThe state vector $\mathbf{x} \in \mathbb{R}^{12}$ and control vector $\mathbf{u} \in \mathbb{R}^4$ are defined as:$$\mathbf{x} = \begin{bmatrix} \mathbf{p} \\ \mathbf{v} \\ \boldsymbol{\Theta} \\ \boldsymbol{\omega} \end{bmatrix} = \begin{bmatrix} x, y, z \\ v_x, v_y, v_z \\ \phi, \theta, \psi \\ p, q, r \end{bmatrix}, \quad \mathbf{u} = \begin{bmatrix} T \\ \tau_x \\ \tau_y \\ \tau_z \end{bmatrix}$$The continuous-time dynamics $\dot{\mathbf{x}} = f(\mathbf{x}, \mathbf{u})$ are integrated via 4th-Order Runge-Kutta (RK4):$$\mathbf{x}_{k+1} = f_d(\mathbf{x}_k, \mathbf{u}_k) = \mathbf{x}_k + \frac{\Delta t}{6}(k_1 + 2k_2 + 2k_3 + k_4)$$2. Cost Function & Obstacle PenaltiesThe total objective function over horizon $N$ is:$$J(\mathbf{x}_{0:N}, \mathbf{u}_{0:N-1}) = \ell_f(\mathbf{x}_N) + \sum_{k=0}^{N-1} \left( \|\mathbf{x}_k - \mathbf{x}_{ref}\|_Q^2 + \|\mathbf{u}_k - \mathbf{u}_{ref}\|_R^2 + C_{obs}(\mathbf{p}_k) \right)$$Where $C_{obs}(\mathbf{p})$ is a differentiable Gaussian obstacle potential field:$$C_{obs}(\mathbf{p}) = w_{obs} \cdot \exp\left( -\frac{\|\mathbf{p} - \mathbf{p}_{obs}\|^2}{2\sigma^2} \right)$$3. Backward Pass & Riccati UpdatesAt each horizon step $k = N-1, \dots, 0$, the $Q$-function local expansions are updated with Levenberg-Marquardt regularization $\mu \mathbf{I}$:$$Q_{\mathbf{u}} = \ell_{\mathbf{u}} + \mathbf{B}_k^T V_{\mathbf{x}}', \quad Q_{\mathbf{u}\mathbf{u}} = \ell_{\mathbf{u}\mathbf{u}} + \mathbf{B}_k^T V_{\mathbf{x}\mathbf{x}}' \mathbf{B}_k + \mu \mathbf{I}$$Feedback gains $\mathbf{K}_k$ and feedforward corrections $\mathbf{k}_k$ are computed as:$$\mathbf{k}_k = -Q_{\mathbf{u}\mathbf{u}}^{-1} Q_{\mathbf{u}}, \quad \mathbf{K}_k = -Q_{\mathbf{u}\mathbf{u}}^{-1} Q_{\mathbf{u}\mathbf{x}}$$⚡ Quick Build & ExecutionRequirementsC++20 compliant compiler (GCC 10+, Clang 11+, or MSVC 2019+)Eigen3 linear algebra library
-Compile & Run
+
+---
+
+## 🧮 Mathematical Formulation
+
+### 1. State Space & Dynamics Model
+
+The state vector $\mathbf{x} \in \mathbb{R}^{12}$ and control vector $\mathbf{u} \in \mathbb{R}^4$ are defined as:
+
+$$
+\mathbf{x} = \begin{bmatrix} \mathbf{p} \\ \mathbf{v} \\ \boldsymbol{\Theta} \\ \boldsymbol{\omega} \end{bmatrix} = \begin{bmatrix} x, y, z \\ v_x, v_y, v_z \\ \phi, \theta, \psi \\ p, q, r \end{bmatrix}, \quad \mathbf{u} = \begin{bmatrix} T \\ \tau_x \\ \tau_y \\ \tau_z \end{bmatrix}
+$$
+
+The continuous-time dynamics $\dot{\mathbf{x}} = f(\mathbf{x}, \mathbf{u})$ are integrated via **4th-Order Runge-Kutta (RK4)**:
+
+$$
+\mathbf{x}_{k+1} = f_d(\mathbf{x}_k, \mathbf{u}_k) = \mathbf{x}_k + \frac{\Delta t}{6}(k_1 + 2k_2 + 2k_3 + k_4)
+$$
+
+### 2. Cost Function & Obstacle Penalties
+
+The total objective function over horizon $N$ is:
+
+$$
+J(\mathbf{x}_{0:N}, \mathbf{u}_{0:N-1}) = \ell_f(\mathbf{x}_N) + \sum_{k=0}^{N-1} \left( \|\mathbf{x}_k - \mathbf{x}_{ref}\|_Q^2 + \|\mathbf{u}_k - \mathbf{u}_{ref}\|_R^2 + C_{obs}(\mathbf{p}_k) \right)
+$$
+
+Where $C_{obs}(\mathbf{p})$ is a differentiable Gaussian obstacle potential field:
+
+$$
+C_{obs}(\mathbf{p}) = w_{obs} \cdot \exp\left( -\frac{\|\mathbf{p} - \mathbf{p}_{obs}\|^2}{2\sigma^2} \right)
+$$
+
+### 3. Backward Pass & Riccati Updates
+
+At each horizon step $k = N-1, \dots, 0$, the $Q$-function local expansions are updated with Levenberg-Marquardt regularization $\mu \mathbf{I}$:
+
+$$
+Q_{\mathbf{u}} = \ell_{\mathbf{u}} + \mathbf{B}_k^T V_{\mathbf{x}}', \quad Q_{\mathbf{u}\mathbf{u}} = \ell_{\mathbf{u}\mathbf{u}} + \mathbf{B}_k^T V_{\mathbf{x}\mathbf{x}}' \mathbf{B}_k + \mu \mathbf{I}
+$$
+
+Feedback gains $\mathbf{K}_k$ and feedforward corrections $\mathbf{k}_k$ are computed as:
+
+$$
+\mathbf{k}_k = -Q_{\mathbf{u}\mathbf{u}}^{-1} Q_{\mathbf{u}}, \quad \mathbf{K}_k = -Q_{\mathbf{u}\mathbf{u}}^{-1} Q_{\mathbf{u}\mathbf{x}}
+$$
+
+---
+
+## ⚡ Quick Build & Execution
+
+### Requirements
+
+- C++20 compliant compiler (GCC 10+, Clang 11+, or MSVC 2019+)
+- Eigen3 linear algebra library
+
+### Compile & Run
+
+```bash
 g++ -std=c++20 -O3 quadrotor_ilqr_optimizer.cpp -I /usr/include/eigen3 -o ilqr_solver
 ./ilqr_solver
+```
+
